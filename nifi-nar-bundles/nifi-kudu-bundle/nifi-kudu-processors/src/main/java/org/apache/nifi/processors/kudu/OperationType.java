@@ -20,5 +20,6 @@ package org.apache.nifi.processors.kudu;
 public enum OperationType {
     INSERT,
     INSERT_IGNORE,
-    UPSERT;
+    UPSERT,
+    DELETE;
 }

@@ -32,6 +32,7 @@ import org.apache.kudu.client.PartialRow;
 import org.apache.kudu.client.RowError;
 import org.apache.kudu.client.SessionConfiguration;
 import org.apache.kudu.client.Upsert;
+import org.apache.kudu.client.Delete;
 import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.RequiresInstanceClassLoading;
@@ -310,9 +311,18 @@ public class PutKudu extends AbstractProcessor {
 
                 Record record = recordSet.next();
                 while (record != null) {
-                    Operation operation = operationType == OperationType.UPSERT
-                        ? upsertRecordToKudu(kuduTable, record, fieldNames)
-                        : insertRecordToKudu(kuduTable, record, fieldNames);
+
+                    Operation operation = null;
+
+                    if (operationType == OperationType.DELETE){
+                        operation = deleteRecordtoKudu(kuduTable, record, fieldNames);
+                    }
+                    else if (operationType == OperationType.UPSERT) {
+                        operation = upsertRecordToKudu(kuduTable, record, fieldNames);
+                    }
+                    else {
+                        operation = insertRecordToKudu(kuduTable, record, fieldNames);
+                    }
 
                     // We keep track of mappings between Operations and their origins,
                     // so that we know which FlowFiles should be marked failure after buffered flush.
@@ -413,7 +423,11 @@ public class PutKudu extends AbstractProcessor {
         }
     }
 
-
+    protected Delete deleteRecordtoKudu(KuduTable kuduTable, Record record, List<String> fieldNames) {
+        Delete delete = kuduTable.newDelete();
+        this.buildPartialRow(kuduTable.getSchema(), delete.getRow(), record, fieldNames);
+        return delete;
+    }
 
     protected Upsert upsertRecordToKudu(KuduTable kuduTable, Record record, List<String> fieldNames) {
         Upsert upsert = kuduTable.newUpsert();
