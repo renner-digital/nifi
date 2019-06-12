@@ -127,8 +127,8 @@ public class PutKudu extends AbstractProcessor {
         .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
         .build();
 
-    protected static final PropertyDescriptor INSERT_OPERATION = new Builder()
-        .name("Insert Operation")
+    protected static final PropertyDescriptor OPERATION_TYPE = new Builder()
+        .name("Operation Type")
         .description("Specify operationType for this processor. Insert-Ignore will ignore duplicated rows")
         .allowableValues(OperationType.values())
         .defaultValue(OperationType.INSERT.toString())
@@ -199,7 +199,7 @@ public class PutKudu extends AbstractProcessor {
         properties.add(KERBEROS_CREDENTIALS_SERVICE);
         properties.add(SKIP_HEAD_LINE);
         properties.add(RECORD_READER);
-        properties.add(INSERT_OPERATION);
+        properties.add(OPERATION_TYPE);
         properties.add(FLUSH_MODE);
         properties.add(FLOWFILE_BATCH_SIZE);
         properties.add(BATCH_SIZE);
@@ -219,7 +219,7 @@ public class PutKudu extends AbstractProcessor {
     @OnScheduled
     public void onScheduled(final ProcessContext context) throws IOException, LoginException {
         final String kuduMasters = context.getProperty(KUDU_MASTERS).evaluateAttributeExpressions().getValue();
-        operationType = OperationType.valueOf(context.getProperty(INSERT_OPERATION).getValue());
+        operationType = OperationType.valueOf(context.getProperty(OPERATION_TYPE).getValue());
         batchSize = context.getProperty(BATCH_SIZE).evaluateAttributeExpressions().asInteger();
         ffbatch   = context.getProperty(FLOWFILE_BATCH_SIZE).evaluateAttributeExpressions().asInteger();
         flushMode = SessionConfiguration.FlushMode.valueOf(context.getProperty(FLUSH_MODE).getValue());
@@ -314,15 +314,23 @@ public class PutKudu extends AbstractProcessor {
 
                     Operation operation = null;
 
-                    if (operationType == OperationType.DELETE){
-                        operation = deleteRecordtoKudu(kuduTable, record, fieldNames);
+                    switch(operationType){
+                        case DELETE:
+                            operation = deleteRecordtoKudu(kuduTable, record, fieldNames);
+                            break;
+                        case UPSERT:
+                            operation = upsertRecordToKudu(kuduTable, record, fieldNames);
+                            break;
+                        case INSERT:
+                            operation = insertRecordToKudu(kuduTable, record, fieldNames);
+                            break;
+                        case INSERT_IGNORE:
+                            operation = insertRecordToKudu(kuduTable, record, fieldNames);
+                            break;
+                        default:
+                            throw new IllegalArgumentException(String.format("Operation %s not supported", operationType));
                     }
-                    else if (operationType == OperationType.UPSERT) {
-                        operation = upsertRecordToKudu(kuduTable, record, fieldNames);
-                    }
-                    else {
-                        operation = insertRecordToKudu(kuduTable, record, fieldNames);
-                    }
+
 
                     // We keep track of mappings between Operations and their origins,
                     // so that we know which FlowFiles should be marked failure after buffered flush.

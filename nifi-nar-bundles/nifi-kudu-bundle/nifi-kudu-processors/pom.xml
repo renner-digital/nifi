@@ -18,13 +18,18 @@
     <parent>
         <groupId>org.apache.nifi</groupId>
         <artifactId>nifi-kudu-bundle</artifactId>
-        <version>1.10.0-RENNER-0.1.0-SNAPSHOT</version>
+        <version>1.10.0-RENNER-0.2.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>nifi-kudu-processors</artifactId>
     <packaging>jar</packaging>
 
     <dependencies>
+        <dependency>
+            <groupId>com.stumbleupon</groupId>
+            <artifactId>async</artifactId>
+            <version>1.4.0</version>
+        </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-api</artifactId>
@@ -46,7 +51,7 @@
         <dependency>
             <groupId>org.apache.kudu</groupId>
             <artifactId>kudu-client</artifactId>
-            <version>1.7.0</version>
+            <version>1.10.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>

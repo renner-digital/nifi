@@ -101,7 +101,7 @@ public class TestPutKudu {
         testRunner.setProperty(PutKudu.KUDU_MASTERS, DEFAULT_MASTERS);
         testRunner.setProperty(PutKudu.SKIP_HEAD_LINE, SKIP_HEAD_LINE);
         testRunner.setProperty(PutKudu.RECORD_READER, "mock-reader-factory");
-        testRunner.setProperty(PutKudu.INSERT_OPERATION, OperationType.INSERT.toString());
+        testRunner.setProperty(PutKudu.OPERATION_TYPE, OperationType.INSERT.toString());
     }
 
     @After
@@ -314,7 +314,7 @@ public class TestPutKudu {
     @Test
     public void testUpsertFlowFiles() throws Exception {
         createRecordReader(50);
-        testRunner.setProperty(PutKudu.INSERT_OPERATION, OperationType.UPSERT.toString());
+        testRunner.setProperty(PutKudu.OPERATION_TYPE, OperationType.UPSERT.toString());
         testRunner.enqueue("string".getBytes());
 
         testRunner.run();
