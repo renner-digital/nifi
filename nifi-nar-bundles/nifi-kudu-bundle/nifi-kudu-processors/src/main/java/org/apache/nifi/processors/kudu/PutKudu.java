@@ -33,6 +33,7 @@ import org.apache.kudu.client.RowError;
 import org.apache.kudu.client.SessionConfiguration;
 import org.apache.kudu.client.Upsert;
 import org.apache.kudu.client.Delete;
+import org.apache.kudu.client.Update;
 import org.apache.nifi.annotation.behavior.EventDriven;
 import org.apache.nifi.annotation.behavior.InputRequirement;
 import org.apache.nifi.annotation.behavior.RequiresInstanceClassLoading;
@@ -324,6 +325,9 @@ public class PutKudu extends AbstractProcessor {
                         case INSERT:
                             operation = insertRecordToKudu(kuduTable, record, fieldNames);
                             break;
+                        case UPDATE:
+                            operation = updateRecordToKudu(kuduTable, record, fieldNames);
+                            break;
                         case INSERT_IGNORE:
                             operation = insertRecordToKudu(kuduTable, record, fieldNames);
                             break;
@@ -448,6 +452,13 @@ public class PutKudu extends AbstractProcessor {
         this.buildPartialRow(kuduTable.getSchema(), insert.getRow(), record, fieldNames);
         return insert;
     }
+
+    protected Update updateRecordToKudu(KuduTable kuduTable, Record record, List<String> fieldNames) {
+        Update update = kuduTable.newUpdate();
+        this.buildPartialRow(kuduTable.getSchema(), update.getRow(), record, fieldNames);
+        return update;
+    }
+
 
     @VisibleForTesting
     void buildPartialRow(Schema schema, PartialRow row, Record record, List<String> fieldNames) {

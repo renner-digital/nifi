@@ -21,5 +21,6 @@ public enum OperationType {
     INSERT,
     INSERT_IGNORE,
     UPSERT,
+    UPDATE,
     DELETE;
 }
