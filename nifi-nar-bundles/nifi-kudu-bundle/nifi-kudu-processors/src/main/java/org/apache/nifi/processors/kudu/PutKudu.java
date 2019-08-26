@@ -18,6 +18,7 @@
 package org.apache.nifi.processors.kudu;
 
 import com.google.common.annotations.VisibleForTesting;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.kudu.ColumnSchema;
 import org.apache.kudu.Schema;
 import org.apache.kudu.Type;
@@ -76,6 +77,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static java.lang.String.format;
+
 @EventDriven
 @SupportsBatching
 @RequiresInstanceClassLoading // Because of calls to UserGroupInformation.setConfiguration
@@ -86,6 +89,9 @@ import java.util.stream.Collectors;
         " If any error occurs while reading records from the input, or writing records to Kudu, the FlowFile will be routed to failure")
 @WritesAttribute(attribute = "record.count", description = "Number of records written to Kudu")
 public class PutKudu extends AbstractProcessor {
+
+    protected static final String OPERATION_TYPE_ATTRIBUTE = "operation.type";
+
     protected static final PropertyDescriptor KUDU_MASTERS = new Builder()
         .name("Kudu Masters")
         .description("List all kudu masters's ip with port (e.g. 7051), comma separated")
@@ -184,6 +190,7 @@ public class PutKudu extends AbstractProcessor {
 
     public static final String RECORD_COUNT_ATTR = "record.count";
 
+    protected OperationType operationTypeProperty;
     protected OperationType operationType;
     protected SessionConfiguration.FlushMode flushMode;
     protected int batchSize = 100;
@@ -220,7 +227,7 @@ public class PutKudu extends AbstractProcessor {
     @OnScheduled
     public void onScheduled(final ProcessContext context) throws IOException, LoginException {
         final String kuduMasters = context.getProperty(KUDU_MASTERS).evaluateAttributeExpressions().getValue();
-        operationType = OperationType.valueOf(context.getProperty(OPERATION_TYPE).getValue());
+        operationTypeProperty = OperationType.valueOf(context.getProperty(OPERATION_TYPE).getValue());
         batchSize = context.getProperty(BATCH_SIZE).evaluateAttributeExpressions().asInteger();
         ffbatch   = context.getProperty(FLOWFILE_BATCH_SIZE).evaluateAttributeExpressions().asInteger();
         flushMode = SessionConfiguration.FlushMode.valueOf(context.getProperty(FLUSH_MODE).getValue());
@@ -310,7 +317,19 @@ public class PutKudu extends AbstractProcessor {
                 final String tableName = context.getProperty(TABLE_NAME).evaluateAttributeExpressions(flowFile).getValue();
                 final KuduTable kuduTable = kuduClient.openTable(tableName);
 
+                if (operationTypeProperty.equals(OperationType.USER_ATTR)){
+                    operationType = OperationType.valueOf(flowFile.getAttribute(OPERATION_TYPE_ATTRIBUTE));
+                } else {
+                    operationType = operationTypeProperty;
+                }
+
+                if (StringUtils.isEmpty(operationType.toString())) {
+                    final String msg = format("Operation Type is not specified, FlowFile %s", flowFile);
+                    throw new IllegalArgumentException(msg);
+                }
+
                 Record record = recordSet.next();
+
                 while (record != null) {
 
                     Operation operation = null;
@@ -415,7 +434,7 @@ public class PutKudu extends AbstractProcessor {
         kuduSession.setMutationBufferSpace(batchSize);
         kuduSession.setFlushMode(flushMode);
 
-        if (operationType == OperationType.INSERT_IGNORE) {
+        if (operationTypeProperty == OperationType.INSERT_IGNORE) {
             kuduSession.setIgnoreAllDuplicateRows(true);
         }
 
