@@ -22,18 +22,19 @@
 
     <artifactId>nifi-livy-nar</artifactId>
     <packaging>nar</packaging>
+    <version>1.9.0-RENNER</version>
 
     <dependencies>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-livy-controller-service-api-nar</artifactId>
-            <version>1.9.0</version>
+            <version>1.9.0-RENNER</version>
             <type>nar</type>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>
             <artifactId>nifi-livy-controller-service</artifactId>
-            <version>1.9.0</version>
+            <version>1.9.0-RENNER</version>
         </dependency>
         <dependency>
             <groupId>org.apache.nifi</groupId>

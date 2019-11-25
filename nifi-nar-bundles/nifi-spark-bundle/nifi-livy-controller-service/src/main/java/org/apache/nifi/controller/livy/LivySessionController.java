@@ -172,12 +172,45 @@ public class LivySessionController extends AbstractControllerService implements 
             .build();
 
     static final PropertyDescriptor KERBEROS_CREDENTIALS_SERVICE = new PropertyDescriptor.Builder()
-        .name("kerberos-credentials-service")
-        .displayName("Kerberos Credentials Service")
-        .description("Specifies the Kerberos Credentials Controller Service that should be used for authenticating with Kerberos")
-        .identifiesControllerService(KerberosCredentialsService.class)
-        .required(false)
-        .build();
+            .name("kerberos-credentials-service")
+            .displayName("Kerberos Credentials Service")
+            .description("Specifies the Kerberos Credentials Controller Service that should be used for authenticating with Kerberos")
+            .identifiesControllerService(KerberosCredentialsService.class)
+            .required(false)
+            .build();
+
+    /** PropertyDescriptor Memory Executor Spark Job
+     * @author Sirleno Vidaletti*/
+    public static final PropertyDescriptor MEMORY_EXECUTOR = new PropertyDescriptor.Builder()
+            .name("Memory Executor Spark Job")
+            .description("Memory Executor Spark Job. (GB)")
+            .required(false)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .defaultValue("2")
+            .build();
+
+    /** PropertyDescriptor DRIVER Memory Spark Job
+     * @author Sirleno Vidaletti*/
+    public static final PropertyDescriptor DRIVER_MEMORY = new PropertyDescriptor.Builder()
+            .name("Driver Memory Spark Job")
+            .description("Driver Memory Spark Job. (GB)")
+            .required(false)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .defaultValue("2")
+            .build();
+
+    /** PropertyDescriptor DRIVER Memory Spark Job
+     * @author Sirleno Vidaletti*/
+    public static final PropertyDescriptor MAX_EXECUTORS = new PropertyDescriptor.Builder()
+            .name("Max Executors Spark Job")
+            .description("Max Executors Spark Job")
+            .required(false)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .defaultValue("20")
+            .build();
 
     private volatile String livyUrl;
     private volatile int sessionPoolSize;
@@ -195,6 +228,10 @@ public class LivySessionController extends AbstractControllerService implements 
 
     private List<PropertyDescriptor> properties;
 
+    private volatile String driverMemory;
+    private volatile String executorMemory;
+    private volatile String maxExecutors;
+
     @Override
     protected void init(ControllerServiceInitializationContext config) {
         final List<PropertyDescriptor> props = new ArrayList<>();
@@ -208,6 +245,12 @@ public class LivySessionController extends AbstractControllerService implements 
         props.add(JARS);
         props.add(FILES);
         props.add(KERBEROS_CREDENTIALS_SERVICE);
+
+        /** PropertyDescriptor Driver Cores Spark Job
+         * @author Sirleno Vidaletti*/
+        props.add(DRIVER_MEMORY);
+        props.add(MAX_EXECUTORS);
+        props.add(MEMORY_EXECUTOR);
 
         properties = Collections.unmodifiableList(props);
     }
@@ -237,6 +280,17 @@ public class LivySessionController extends AbstractControllerService implements 
         this.files = files;
         this.sessionPoolSize = Integer.valueOf(sessionPoolSize);
         this.enabled = true;
+
+        /** PropertyDescriptor Driver Cores Spark Job
+         * @author Sirleno Vidaletti*/
+        final String driverMemory=context.getProperty(DRIVER_MEMORY).evaluateAttributeExpressions().getValue();
+        final String executorMemory=context.getProperty(MEMORY_EXECUTOR).evaluateAttributeExpressions().getValue();
+        final String maxExecutors=context.getProperty(MAX_EXECUTORS).evaluateAttributeExpressions().getValue();
+
+        this.driverMemory=driverMemory;
+        this.executorMemory=executorMemory;
+        this.maxExecutors=maxExecutors;
+
 
         livySessionManagerThread = new Thread(() -> {
             while (enabled) {
@@ -317,10 +371,10 @@ public class LivySessionController extends AbstractControllerService implements 
         if (credentialsService != null) {
             CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
             credentialsProvider.setCredentials(new AuthScope(null, -1, null),
-                new KerberosKeytabCredentials(credentialsService.getPrincipal(), credentialsService.getKeytab()));
+                    new KerberosKeytabCredentials(credentialsService.getPrincipal(), credentialsService.getKeytab()));
             httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
             Lookup<AuthSchemeProvider> authSchemeRegistry = RegistryBuilder.<AuthSchemeProvider> create()
-                .register(AuthSchemes.SPNEGO, new KerberosKeytabSPNegoAuthSchemeProvider()).build();
+                    .register(AuthSchemes.SPNEGO, new KerberosKeytabSPNegoAuthSchemeProvider()).build();
             httpClientBuilder.setDefaultAuthSchemeRegistry(authSchemeRegistry);
         }
 
@@ -475,6 +529,21 @@ public class LivySessionController extends AbstractControllerService implements 
             payload.append(",\"files\":");
             payload.append(filesJsonArray);
         }
+
+        /** PropertyDescriptor Driver Cores Spark Job
+         * @author Sirleno Vidaletti*/
+
+        payload.append(",\"driverMemory\":");
+        payload.append( mapper.writeValueAsString(driverMemory+"G"));
+
+        payload.append(",\"executorMemory\":");
+        payload.append(mapper.writeValueAsString(executorMemory+"G"));
+
+        Map<String, String> map = new HashMap<>();
+        map.put("spark.dynamicAllocation.maxExecutors", maxExecutors);
+
+        payload.append(",\"conf\":");
+        payload.append(mapper.writeValueAsString(map));
 
         payload.append("}");
         log.debug("openSession() Session Payload: " + payload.toString());

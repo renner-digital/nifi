@@ -21,6 +21,7 @@
     </parent>
 
     <artifactId>nifi-livy-controller-service-api</artifactId>
+    <version>1.9.0-RENNER</version>
 
     <dependencies>
         <dependency>
