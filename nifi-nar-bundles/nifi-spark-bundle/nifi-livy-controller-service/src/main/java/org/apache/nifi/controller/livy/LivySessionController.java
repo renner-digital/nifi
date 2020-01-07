@@ -212,6 +212,17 @@ public class LivySessionController extends AbstractControllerService implements 
             .defaultValue("20")
             .build();
 
+    /** PropertyDescriptor Spark Parameters
+     * @author Sirleno Vidaletti*/
+    public static final PropertyDescriptor SPARK_PARAMETERS = new PropertyDescriptor.Builder()
+            .name("Spark Job parameters")
+            .description("Spark Job parameters.Include parameters between commas.")
+            .required(false)
+            .addValidator(StandardValidators.NON_EMPTY_VALIDATOR)
+            .expressionLanguageSupported(ExpressionLanguageScope.FLOWFILE_ATTRIBUTES)
+            .defaultValue("spark.dynamicAllocation.maxExecutors=2")
+            .build();
+
     private volatile String livyUrl;
     private volatile int sessionPoolSize;
     private volatile String controllerKind;
@@ -231,6 +242,7 @@ public class LivySessionController extends AbstractControllerService implements 
     private volatile String driverMemory;
     private volatile String executorMemory;
     private volatile String maxExecutors;
+    private volatile String sparkparameters;
 
     @Override
     protected void init(ControllerServiceInitializationContext config) {
@@ -251,6 +263,7 @@ public class LivySessionController extends AbstractControllerService implements 
         props.add(DRIVER_MEMORY);
         props.add(MAX_EXECUTORS);
         props.add(MEMORY_EXECUTOR);
+        props.add(SPARK_PARAMETERS);
 
         properties = Collections.unmodifiableList(props);
     }
@@ -286,11 +299,12 @@ public class LivySessionController extends AbstractControllerService implements 
         final String driverMemory=context.getProperty(DRIVER_MEMORY).evaluateAttributeExpressions().getValue();
         final String executorMemory=context.getProperty(MEMORY_EXECUTOR).evaluateAttributeExpressions().getValue();
         final String maxExecutors=context.getProperty(MAX_EXECUTORS).evaluateAttributeExpressions().getValue();
+        final String sparkParameters=context.getProperty(SPARK_PARAMETERS).evaluateAttributeExpressions().getValue();
 
         this.driverMemory=driverMemory;
         this.executorMemory=executorMemory;
         this.maxExecutors=maxExecutors;
-
+        this.sparkparameters=sparkParameters;
 
         livySessionManagerThread = new Thread(() -> {
             while (enabled) {
@@ -542,10 +556,42 @@ public class LivySessionController extends AbstractControllerService implements 
         Map<String, String> map = new HashMap<>();
         map.put("spark.dynamicAllocation.maxExecutors", maxExecutors);
 
+
+        /** Append Spark parameters
+         * @author Sirleno Vidaletti*/
+        //if parameter sparkParameters is not null or not empty
+        if (sparkparameters != null) {
+
+
+            if (sparkparameters.contains(",")) {
+
+                String[] valuesSparkParameters = sparkparameters.split(",");
+
+                for (String parameter : valuesSparkParameters) {
+
+                    String mapParameters[] = parameter.split("=");
+                    String parameterKey = mapParameters[0];
+                    String parameterValue = mapParameters[1];
+                    map.put(parameterKey, parameterValue);
+                }
+
+
+            } else {
+
+                String mapParameters[] = sparkparameters.split("=");
+                String parameterKey = mapParameters[0];
+                String parameterValue = mapParameters[1];
+                map.put(parameterKey, parameterValue);
+
+            }
+
+
+        }
+
         payload.append(",\"conf\":");
         payload.append(mapper.writeValueAsString(map));
-
         payload.append("}");
+
         log.debug("openSession() Session Payload: " + payload.toString());
         Map<String, String> headers = new HashMap<>();
         headers.put("Content-Type", APPLICATION_JSON);
