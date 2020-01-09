@@ -214,7 +214,7 @@ public class LivySessionController extends AbstractControllerService implements 
 
     /** PropertyDescriptor Spark Parameters
      * @author Sirleno Vidaletti*/
-    public static final PropertyDescriptor SPARK_PARAMETERS = new PropertyDescriptor.Builder()
+    public static final PropertyDescriptor SPARK_SESSION_PARAMETERS = new PropertyDescriptor.Builder()
             .name("Spark Job parameters")
             .description("Spark Job parameters.Include parameters between commas.")
             .required(false)
@@ -263,7 +263,7 @@ public class LivySessionController extends AbstractControllerService implements 
         props.add(DRIVER_MEMORY);
         props.add(MAX_EXECUTORS);
         props.add(MEMORY_EXECUTOR);
-        props.add(SPARK_PARAMETERS);
+        props.add(SPARK_SESSION_PARAMETERS);
 
         properties = Collections.unmodifiableList(props);
     }
@@ -299,7 +299,7 @@ public class LivySessionController extends AbstractControllerService implements 
         final String driverMemory=context.getProperty(DRIVER_MEMORY).evaluateAttributeExpressions().getValue();
         final String executorMemory=context.getProperty(MEMORY_EXECUTOR).evaluateAttributeExpressions().getValue();
         final String maxExecutors=context.getProperty(MAX_EXECUTORS).evaluateAttributeExpressions().getValue();
-        final String sparkParameters=context.getProperty(SPARK_PARAMETERS).evaluateAttributeExpressions().getValue();
+        final String sparkParameters=context.getProperty(SPARK_SESSION_PARAMETERS).evaluateAttributeExpressions().getValue();
 
         this.driverMemory=driverMemory;
         this.executorMemory=executorMemory;
